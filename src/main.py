@@ -70,9 +70,22 @@ def main():
 
     # Booking process
     if args.name:
-        # Attempt to find and book the specified room
+        available_rooms = list_available_rooms(
+            creds,
+            start_time,
+            end_time,
+            rooms,
+            floor=None,
+            min_capacity=None,
+        )
+        normalized_input_name = args.name.strip().lower()
         room_to_book = next(
-            (room for room in available_rooms if room.name == args.name), None
+            (
+                room
+                for room in available_rooms
+                if room.name.strip().lower() == normalized_input_name
+            ),
+            None,
         )
         if room_to_book:
             create_event(
