@@ -1,17 +1,23 @@
 import sys
 from datetime import datetime, timedelta
 import pytz
-from utils import (
-    list_available_rooms,
-    print_rooms_info,
-    create_event,
-)
+from utils import list_available_rooms, print_rooms_info, create_event, filter_rooms
 from authentification import get_credentials
 import argparse
 from config import read_config, print_current_config, load_room_config
+from google.oauth2.credentials import Credentials
 
 
-def parse_args(defaults):
+def parse_args(defaults: dict) -> argparse.Namespace:
+    """
+    Parses the command-line arguments.
+
+    Parameters:
+    - defaults: A dictionary containing default configuration values.
+
+    Returns:
+    - A namespace with the parsed arguments.
+    """
     parser = argparse.ArgumentParser(description="List or book available rooms.")
     parser.add_argument("-n", "--name", type=str, help="Name of the room to book.")
     parser.add_argument(
@@ -44,40 +50,33 @@ def parse_args(defaults):
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
+    """
+    The main function to list or book rooms based on command-line arguments.
+    """
     default_configuration = read_config()
     rooms = load_room_config()
     print_current_config(default_configuration)
 
     args = parse_args(default_configuration)
-    creds = get_credentials()
-    start_time = datetime.now(tz=pytz.UTC)
-    end_time = start_time + timedelta(minutes=args.duration)
+    creds: Credentials = get_credentials()
+    start_time: datetime = datetime.now(tz=pytz.UTC)
+    end_time: datetime = start_time + timedelta(minutes=args.duration)
 
-    if str(args.floor).lower() == "all":
-        args.floor = None
-    else:
-        args.floor = int(args.floor)
+    floor: int | None = None if str(args.floor).lower() == "all" else int(args.floor)
 
     # Load available rooms based on provided filters
-    available_rooms = list_available_rooms(
-        creds, start_time, end_time, rooms, floor=args.floor, min_capacity=args.capacity
-    )
+    available_rooms = list_available_rooms(creds, start_time, end_time, rooms)
 
     if args.list:
-        print_rooms_info(available_rooms, creds, start_time)
-        return  # Exit after listing available rooms
+        filtered_rooms = filter_rooms(
+            available_rooms, floor=floor, min_capacity=args.capacity
+        )
+        print_rooms_info(filtered_rooms, creds, start_time)
+        return
 
     # Booking process
     if args.name:
-        available_rooms = list_available_rooms(
-            creds,
-            start_time,
-            end_time,
-            rooms,
-            floor=None,
-            min_capacity=None,
-        )
         normalized_input_name = args.name.strip().lower()
         room_to_book = next(
             (

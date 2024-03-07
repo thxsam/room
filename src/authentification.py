@@ -1,5 +1,4 @@
 from google_auth_oauthlib.flow import InstalledAppFlow
-
 import os
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
@@ -13,7 +12,14 @@ SCOPES = [
 ]
 
 
-def get_credentials():
+def get_credentials() -> Credentials:
+    """
+    Gets the Google OAuth2 credentials. Attempts to use the saved token,
+    refresh it if necessary, or creates a new one if the token is missing or invalid.
+
+    Returns:
+        Credentials: The OAuth2 credentials for the Google API.
+    """
     creds = None
     if os.path.exists(TOKEN_PATH):
         creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
