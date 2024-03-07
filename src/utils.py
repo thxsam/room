@@ -5,24 +5,35 @@ from collections import defaultdict
 
 
 def list_available_rooms(
-    creds, start_time, end_time, rooms, floor: int = None, min_capacity: int = None
+    creds,
+    start_time,
+    end_time,
+    rooms,
+    floor: int = None,
+    min_capacity: int = None,
+    chunk_size=10,
 ):
     service = build("calendar", "v3", credentials=creds)
-    body = {
-        "timeMin": start_time.isoformat(),
-        "timeMax": end_time.isoformat(),
-        "items": [{"id": room.id} for room in rooms],
-        "timeZone": "UTC",
-    }
+    available_rooms = []
+    for i in range(0, len(rooms), chunk_size):
+        # Splitting the rooms into chunks
+        chunked_rooms = rooms[i : i + chunk_size]
+        body = {
+            "timeMin": start_time.isoformat(),
+            "timeMax": end_time.isoformat(),
+            "items": [{"id": room.id} for room in chunked_rooms],
+            "timeZone": "UTC",
+        }
 
-    response = service.freebusy().query(body=body).execute()
+        response = service.freebusy().query(body=body).execute()
 
-    available_rooms = [
-        room
-        for room in rooms
-        if room.id in response["calendars"]
-        and not response["calendars"][room.id]["busy"]
-    ]
+        for room in chunked_rooms:
+            if room.id in response["calendars"] and not response["calendars"][
+                room.id
+            ].get("busy"):
+                available_rooms.append(room)
+
+    # Further filtering by floor and capacity if specified
     if floor is not None:
         available_rooms = [room for room in available_rooms if room.floor == floor]
     if min_capacity is not None:
